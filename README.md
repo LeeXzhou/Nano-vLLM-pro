@@ -17,7 +17,6 @@
   - Fused RMSNorm（residual add + norm + scale + shift）
   - Fused SiLU+Mul（消除中间 tensor 显存写入）
   - Fused RoPE（原地旋转，避免额外分配）
-  - Fused Sampler（支持 greedy / top-k / top-p 多策略采样）
 - **CPU Offload**（Phase 2）：KV-Cache 页块卸载到 CPU pinned memory，扩展可服务序列数
 - **标准化 Benchmark**（Phase 3）：结构化性能评测框架，覆盖 TTFT / TPS / E2E Latency / Percentiles
 - **混合调度**（Phase 4）：Prefill/Decode 混合调度，消除显存震荡问题
@@ -44,12 +43,11 @@ nanovllm/
 │   ├── activation.py        # SiluAndMul（Triton + torch.compile 双路径）
 │   ├── layernorm.py         # RMSNorm（Triton + torch.compile 双路径）
 │   ├── rotary_embedding.py  # RoPE（Triton + torch.compile 双路径）
-│   ├── sampler.py           # 采样器（Triton + PyTorch 双路径，多策略）
+│   ├── sampler.py           # 采样器（PyTorch 实现）
 │   ├── embed_head.py        # 词嵌入 + LM Head
 │   ├── triton_rmsnorm.py    # Triton Fused RMSNorm kernel
 │   ├── triton_activation.py # Triton Fused SiLU+Mul kernel
-│   ├── triton_rotary_embedding.py  # Triton Fused RoPE kernel
-│   └── triton_sampler.py    # Triton 采样 kernel（greedy/temperature/top-k/top-p）
+│   └── triton_rotary_embedding.py  # Triton Fused RoPE kernel
 ├── models/
 │   └── qwen3.py             # Qwen3 模型实现
 └── utils/
@@ -151,7 +149,6 @@ python -m benchmark.oscillation_repro --model ~/huggingface/Qwen3-0.6B/
 | RMSNorm | 2个 `@torch.compile` 子图 | 1个 Triton kernel | 减少 kernel launch + 中间 tensor |
 | SiluAndMul | `@torch.compile` SwiGLU | Fused SiLU+Mul | 消除中间 tensor 显存写入 |
 | RoPE | `@torch.compile` apply_rotary_emb | 原地旋转 kernel | 避免额外分配 |
-| Sampler | Gumbel-max `@torch.compile` | 多策略 fused kernel | 支持 greedy/top-k/top-p |
 
 ## 依赖
 
