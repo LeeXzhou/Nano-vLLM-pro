@@ -38,36 +38,19 @@ class RotaryEmbedding(nn.Module):
         cache = torch.cat((cos, sin), dim=-1).unsqueeze_(1)
         self.register_buffer("cos_sin_cache", cache, persistent=False)
 
-    @torch.compile
     def forward(
         self,
         positions: torch.Tensor,
         query: torch.Tensor,
         key: torch.Tensor,
     ) -> tuple[torch.Tensor, torch.Tensor]:
+        if self.use_triton and query.is_cuda:
+            return triton_apply_rotary_emb(positions, query, key, self.cos_sin_cache)
         cos_sin = self.cos_sin_cache[positions]
         cos, sin = cos_sin.chunk(2, dim=-1)
         query = apply_rotary_emb(query, cos, sin)
         key = apply_rotary_emb(key, cos, sin)
         return query, key
-
-    def _triton_forward(
-        self,
-        positions: torch.Tensor,
-        query: torch.Tensor,
-        key: torch.Tensor,
-    ) -> tuple[torch.Tensor, torch.Tensor]:
-        return triton_apply_rotary_emb(positions, query, key, self.cos_sin_cache)
-
-    def __call__(
-        self,
-        positions: torch.Tensor,
-        query: torch.Tensor,
-        key: torch.Tensor,
-    ) -> tuple[torch.Tensor, torch.Tensor]:
-        if self.use_triton and query.is_cuda:
-            return self._triton_forward(positions, query, key)
-        return self.forward(positions, query, key)
 
 
 @lru_cache(1)

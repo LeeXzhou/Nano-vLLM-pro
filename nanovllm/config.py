@@ -16,7 +16,7 @@ class Config:
     eos: int = -1
     kvcache_block_size: int = 256
     num_kvcache_blocks: int = -1
-    use_triton: bool = True
+    use_triton: bool = False
 
     def __post_init__(self):
         assert os.path.isdir(self.model)

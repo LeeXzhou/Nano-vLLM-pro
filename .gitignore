@@ -195,4 +195,4 @@ cython_debug/
 .cursorindexingignore
 
 # config
-config.yml
+config.yaml
